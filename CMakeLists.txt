@@ -20,10 +20,11 @@ endif()
 
 set(CMAKE_C_STANDARD 11) # Requires C11 standard
 
+add_library(stack stack.c)
 add_library(maze_gen maze.c)
 add_executable(ray_maze main.c)
 
-target_link_libraries(ray_maze raylib maze_gen)
+target_link_libraries(ray_maze raylib maze_gen stack)
 
 # Checks if OSX and links appropriate frameworks (only required on MacOS)
 if (APPLE)

@@ -44,23 +44,36 @@ int main(void) {
     // Generate maze;
     const int sideLength = 30;
     int *box_data = (int *) calloc(sideLength*sideLength, sizeof(int));
-    maze_t box_maze = {box_data,sideLength,sideLength};
-    carve_maze(&box_maze);
+    maze_t m = {box_data, sideLength, sideLength};
+    fill_maze(&m);
+    carve_maze(&m);
 
+    unsigned int frames = 0;
+    size_t initial_cap = (m.width * m.height) / 4;
+    arr_stack_t *stack = new_stack(sizeof(pos_t), initial_cap);
+    pos_t current = {0, 0};
     while (!WindowShouldClose()) {
         BeginDrawing();
         {
+            if (frames % 2 == 0 && stack->len > 0) {
+                carve_step(&m, stack, &current);
+            }
             ClearBackground(RAYWHITE);
             DrawText("RayMaze!", screen_width - 30, 30, 20, LIGHTGRAY);
-            draw_maze(&box_maze, 10, 10, 9);
+            draw_maze(&m, 10, 10, 9);
+            DrawRectangle(10 + (9 * current.ox) + 3, 10 + (9 * current.oy) + 3, 3, 3, MAGENTA);
             if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
-                carve_maze(&box_maze);
+                current = (pos_t) {0, 0};
+                fill_maze(&m);
+                push(stack, &current);
             }
+            frames++;
         }
         EndDrawing();
     }
 
     CloseWindow();
     free(box_data);
+    free_stack(stack);
     return 0;
 }

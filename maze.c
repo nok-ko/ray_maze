@@ -13,6 +13,7 @@ Credit to Jamis Buck for teaching me this wonderful algorithm.
 #include <stdlib.h>
 #include <stdbool.h>
 #include "maze.h"
+#include "stack.h"
 
 // Fill a maze with walls, i.e. NONE values
 void fill_maze(struct maze *m) {
@@ -24,49 +25,39 @@ void fill_maze(struct maze *m) {
 }
 
 // get a random neighbour!
-struct neighbour get_neighbour(int ox, int oy, struct maze *m) {
-    // check out-of-bounds
-    bool can_N, can_E, can_S, can_W;
-    can_N = (oy - 1) >= 0;
-    can_E = (ox + 1) < m->width;
-    can_S = (oy + 1) < m->height;
-    can_W = (ox - 1) >= 0;
+neighbour_t get_neighbour(int ox, int oy, struct maze *m) {
+    typedef struct {
+        int direction;
+        char offset_x;
+        char offset_y;
+        bool isNotOOB;
+    } direction_t;
 
-    struct neighbour neighbours[4];
+    direction_t directions[4] = {
+            N,  0, -1, (oy - 1) >= 0,
+            E,  1, 0, (ox + 1) < m->width,
+            S,  0, 1, (oy + 1) < m->height,
+            W,  -1, 0, (ox - 1) >= 0,
+    };
+
+    neighbour_t neighbours[4];
     int count = 0;
-    // North: (0, -1)
-    if (can_N) {
-        int *data = &m->data[(m->width * (oy - 1)) + (ox)];
-        if (*data == NONE) {
-            neighbours[count] = (struct neighbour) {0, -1, N, data};
-            count++;
+    for (int i = 0; i < 4; i++) {
+        const direction_t current = directions[i];
+        if (current.isNotOOB) {
+            int *data = &m->data[(m->width * (oy + current.offset_y)) + (ox + current.offset_x)];
+            if (*data == NONE) {
+                neighbours[count] = (neighbour_t) {
+                    current.offset_x,
+                    current.offset_y,
+                    current.direction,
+                    data
+                };
+                count++;
+            }
         }
     }
-    // East: (+1, 0)
-    if (can_E) {
-        int *data = &m->data[(m->width * (oy)) + (ox + 1)];
-        if (*data == NONE) {
-            neighbours[count] = (struct neighbour) {1, 0, E, data};
-            count++;
-        }
-    }
-    // South: (0, +1)
-    if (can_S) {
-        int *data = &m->data[(m->width * (oy + 1)) + (ox)];
-        if (*data == NONE) {
-            neighbours[count] = (struct neighbour) {0, 1, S, data};
-            count++;
-        }
-    }
-    // West: (-1, 0)
-    if (can_W) {
-        int *data = &m->data[(m->width * (oy)) + (ox - 1)];
-        if (*data == NONE) {
-            neighbours[count] = (struct neighbour) {-1, 0, W, data};
-            count++;
-        }
-    }
-    struct neighbour out = {.ox=0, .oy=0};
+    neighbour_t out = {.ox=0, .oy=0};
     // No valid neighbours.
     if (count == 0) {
         // Can't keep going, return!
@@ -77,8 +68,7 @@ struct neighbour get_neighbour(int ox, int oy, struct maze *m) {
     // Honestly, I've stopped caring.
     // PRO TIP: MAKE SURE YOU DON'T INDEX BY NEGATIVE VALUES.
     // THIS BUG TOOK AWAY VALUABLE HOURS OF MY LIFE.
-    int rand = arc4random();
-    out = neighbours[rand % count];
+    out = neighbours[arc4random() % count];
     return out;
 }
 
@@ -98,6 +88,10 @@ static const int opposite[N+1] = {
         // [8] => N, opposite = S
         S
 };
+
+typedef struct {int ox; int oy;} pos_t;
+
+void carve_step(struct maze *m, arr_stack_t *stack, pos_t *current);
 
 void carve(int ox, int oy, struct maze *m) {
     int *current = &m->data[(m->width * oy) + ox];
@@ -122,10 +116,61 @@ void carve(int ox, int oy, struct maze *m) {
     }
 }
 
+
+void carve_iter(int ox, int oy, struct maze *m) {
+    size_t initial_cap = (m->width * m->height) / 4;
+    arr_stack_t *stack = new_stack(sizeof(pos_t), initial_cap);
+    pos_t current = {ox, oy};
+    push(stack, &current);
+    while (stack->len) {
+        carve_step(m, stack, &current);
+    }
+    free_stack(stack);
+}
+
+void carve_step(struct maze *m, arr_stack_t *stack, pos_t *current) {
+    int *cell = &m->data[(m->width * (*current).oy) + (*current).ox];
+    neighbour_t nb = get_neighbour((*current).ox, (*current).oy, m);
+    // no neighbours here, move on
+    if (nb.ox != 0 || nb.oy != 0) {
+        // Check if there's any path to the neighbour
+        // If not:
+        if (!(*cell & nb.direction) && *nb.data == NONE) {
+            *nb.data |= opposite[nb.direction]; // carved!
+            // carve self!
+            *cell |= nb.direction;
+            // recur!
+            push(stack, &((pos_t) {current->ox + nb.ox, current->oy + nb.oy}));
+            peek(stack, current);
+        }
+    } else {
+        pop(stack, current);
+    }
+}
+void carve_step_fishbone(struct maze *m, arr_stack_t *stack, pos_t *current) {
+    int *cell = &m->data[(m->width * (*current).oy) + (*current).ox];
+    neighbour_t nb = get_neighbour((*current).ox, (*current).oy, m);
+    // no neighbours here, move on
+    if (nb.ox != 0 || nb.oy != 0) {
+        // Check if there's any path to the neighbour
+        // If not:
+        if (!(*cell & nb.direction) && *nb.data == NONE) {
+            *nb.data |= opposite[nb.direction]; // carved!
+            // carve self!
+            *cell |= nb.direction;
+            // recur!
+            push(stack, &((pos_t) {current->ox + nb.ox, current->oy + nb.oy}));
+//            peek(stack, current);
+        }
+    } else {
+        pop(stack, current);
+    }
+}
+
 void carve_maze(maze_t *m) {
     // Fill the maze, we'll be carving paths out.
     fill_maze(m);
-    carve(0, 0, m);
+    carve_iter(0, 0, m);
 }
 
 //int main(int argc, char **argv) {
