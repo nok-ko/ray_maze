@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <raylib.h>
-#include "./maze.c"
+#include "maze.h"
+#include "queue.h"
+#include "stack.h"
 
 #define VERSION "0.0.1"
 
@@ -24,7 +26,7 @@ void draw_row(maze_t *m, size_t offset, int x, int y, int cellWidth, Color color
         if (!(*data & E)) DrawRectangle(x + (2 * THIRD), y + THIRD, THIRD, THIRD, *color_p); else {}
 
         if (*data == NONE) {
-//            DrawRectangle(x + THIRD, y + THIRD, THIRD, THIRD, BLACK);
+            DrawRectangle(x + THIRD, y + THIRD, THIRD, THIRD, *color_p);
         }
 
         x += cellWidth;
@@ -54,13 +56,14 @@ void color_step(maze_t *m, Color *color_data, arr_stack_t *stack, const unsigned
         Vector3 hsv = ColorToHSV(RED);
         float factor = ((float) (frames % size)) / (float)(size);
         Color trans;
-        if (factor < 0.33) {
-            trans = ColorAlphaBlend(PINK, WHITE, ColorAlpha(WHITE, factor));
-        } else if (factor < 0.66){
-            trans = ColorAlphaBlend(RAYWHITE, BLUE, ColorAlpha(WHITE, factor * (float)0.2));
-        } else {
-            trans = ColorAlphaBlend(WHITE, BLUE, ColorAlpha(WHITE, factor));
-        }
+//        if (factor < 0.33) {
+//            trans = ColorAlphaBlend(PINK, WHITE, ColorAlpha(WHITE, factor));
+//        } else if (factor < 0.66){
+//            trans = ColorAlphaBlend(RAYWHITE, BLUE, ColorAlpha(WHITE, factor * (float)0.2));
+//        } else {
+//            trans = ColorAlphaBlend(WHITE, BLUE, ColorAlpha(WHITE, factor));
+//        }
+        trans = ColorAlphaBlend(ORANGE, MAGENTA, ColorAlpha(WHITE, factor));
         Color result = ColorFromHSV(hsv.x, hsv.y, hsv.z);
         *current = trans;
     }
@@ -91,36 +94,57 @@ int main(void) {
     const int offset_y = 2;
     // cell size, cwidth^2 pixels
     const int cwidth = 9;
+
+    queue history_queue;
+    createQueue(&history_queue, 50, sizeof(pos_t));
     while (!WindowShouldClose()) {
         BeginDrawing();
-        {
-            if (frames % 1 == 0 && stack->len > 0) {
-                for (int i = 0; i < 60 && stack->len > 0; i++) {
-                    carve_step(&m, stack, &current);
-                    color_step(&m, color_data, stack, frames);
-                    frames++;
+        if (frames % 2 == 0 && stack->len > 0) {
+            for (int i = 0; i < 1 && stack->len > 0; i++) {
+                frames++;
+                while (stack->len && !carve_step(&m, stack, &current)) {
+                    enqueue(&history_queue, &current);
                 }
-            }
-            ClearBackground(WHITE);
-            DrawText("RayMaze!", screen_width - 30, 30, 20, LIGHTGRAY);
-            draw_maze(&m,offset_x, offset_y, cwidth, (Color *) color_data);
-            DrawRectangle(offset_x + (cwidth * current.ox) + (cwidth/3),
-                          offset_y + (cwidth * current.oy) + (cwidth/3),
-                          cwidth/3, cwidth/3,
-                          MAGENTA);
-            if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
-                frames = 0;
-                *color_data = RED;
-                current = (pos_t) {0, 0};
-                fill_maze(&m);
-                push(stack, &current);
+                enqueue(&history_queue, &current);
+                color_step(&m, color_data, stack, frames);
             }
         }
+        ClearBackground(WHITE);
+        DrawText("RayMaze!", screen_width - 30, 30, 20, LIGHTGRAY);
+        draw_maze(&m,offset_x, offset_y, cwidth, (Color *) color_data);
+//            DrawRectangle(offset_x + (cwidth * current.ox) + (cwidth/3),
+//                          offset_y + (cwidth * current.oy) + (cwidth/3),
+//                          cwidth/3, cwidth/3,
+//                          MAGENTA);
+        for (size_t i = 0; i < history_queue.size; i++) {
+            pos_t *el = (history_queue.values + i*(sizeof(pos_t)));
+            DrawRectangle(offset_x + (cwidth * el->ox) + (cwidth/3),
+                          offset_y + (cwidth * el->oy) + (cwidth/3),
+                          cwidth/3, cwidth/3,
+                          BLUE);
+        }
+        if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+            emptyQueue(&history_queue);
+            frames = 0;
+            *color_data = BLUE;
+            fill_maze(&m);
+            stack->len = 0;
+            push(stack, &current);
+        }
+        if (IsMouseButtonReleased(MOUSE_BUTTON_RIGHT)) {
+            fill_maze(&m);
+            stack->len = 1;
+            peek(stack, &current);
+            stack->len = 0;
+        }
+        frames++;
         EndDrawing();
     }
 
     CloseWindow();
     free(box_data);
     free_stack(stack);
+    free(color_data);
+    free(history_queue.values);
     return 0;
 }

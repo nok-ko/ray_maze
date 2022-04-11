@@ -6,6 +6,8 @@
 #ifndef RAY_MAZE_MAZE_H
 #define RAY_MAZE_MAZE_H
 
+#include "stack.h"
+
 // A maze is represented as pointer to the beginning of a `data` array,
 // and that array's width and height.
 typedef struct maze {
@@ -13,6 +15,9 @@ typedef struct maze {
     int width;
     int height;
 } maze_t;
+
+// Simple Vec2 thing
+typedef struct {int ox; int oy;} pos_t;
 
 // Openings in each maze cell are represented as a bitfield:
 // 0b1000 = 8, north
@@ -43,5 +48,7 @@ void fill_maze(maze_t *m);
 void carve(int ox, int oy, maze_t *m);
 
 void carve_maze(maze_t *m);
+
+bool carve_step(struct maze *m, arr_stack_t *stack, pos_t *current);
 
 #endif //RAY_MAZE_MAZE_H

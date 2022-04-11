@@ -89,9 +89,8 @@ static const int opposite[N+1] = {
         S
 };
 
-typedef struct {int ox; int oy;} pos_t;
 
-void carve_step(struct maze *m, arr_stack_t *stack, pos_t *current);
+bool carve_step(struct maze *m, arr_stack_t *stack, pos_t *current);
 
 void carve(int ox, int oy, struct maze *m) {
     int *current = &m->data[(m->width * oy) + ox];
@@ -128,11 +127,12 @@ void carve_iter(int ox, int oy, struct maze *m) {
     free_stack(stack);
 }
 
-void carve_step(struct maze *m, arr_stack_t *stack, pos_t *current) {
+bool carve_step(struct maze *m, arr_stack_t *stack, pos_t *current) {
     int *cell = &m->data[(m->width * (*current).oy) + (*current).ox];
     neighbour_t nb = get_neighbour((*current).ox, (*current).oy, m);
     // no neighbours here, move on
-    if (nb.ox != 0 || nb.oy != 0) {
+    bool hasNeighbours = (nb.ox != 0 || nb.oy != 0);
+    if (hasNeighbours) {
         // Check if there's any path to the neighbour
         // If not:
         if (!(*cell & nb.direction) && *nb.data == NONE) {
@@ -146,6 +146,7 @@ void carve_step(struct maze *m, arr_stack_t *stack, pos_t *current) {
     } else {
         pop(stack, current);
     }
+    return hasNeighbours;
 }
 void carve_step_fishbone(struct maze *m, arr_stack_t *stack, pos_t *current) {
     int *cell = &m->data[(m->width * (*current).oy) + (*current).ox];
