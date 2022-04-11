@@ -5,7 +5,7 @@
 #include "queue.h"
 #include "stack.h"
 
-#define VERSION "0.0.1"
+#define VERSION "0.0.3"
 
 void draw_row(maze_t *m, size_t offset, int x, int y, int cellWidth, Color color, Color *color_data) {
     int *data = m->data + offset;
