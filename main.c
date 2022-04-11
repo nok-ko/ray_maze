@@ -97,9 +97,12 @@ int main(void) {
 
     queue history_queue;
     createQueue(&history_queue, 50, sizeof(pos_t));
+    fill_maze(&m);
+    stack->len = 0;
+    push(stack, &current);
     while (!WindowShouldClose()) {
         BeginDrawing();
-        if (frames % 2 == 0 && stack->len > 0) {
+        if (false && frames % 2 == 0 && stack->len > 0) {
             for (int i = 0; i < 1 && stack->len > 0; i++) {
                 frames++;
                 while (stack->len && !carve_step(&m, stack, &current)) {
@@ -118,18 +121,22 @@ int main(void) {
 //                          MAGENTA);
         for (size_t i = 0; i < history_queue.size; i++) {
             pos_t *el = (history_queue.values + i*(sizeof(pos_t)));
-            DrawRectangle(offset_x + (cwidth * el->ox) + (cwidth/3),
-                          offset_y + (cwidth * el->oy) + (cwidth/3),
-                          cwidth/3, cwidth/3,
-                          BLUE);
+//            DrawRectangle(offset_x + (cwidth * el->ox) + (cwidth/3),
+//                          offset_y + (cwidth * el->oy) + (cwidth/3),
+//                          cwidth/3, cwidth/3,
+//                          BLUE);
         }
-        if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
-            emptyQueue(&history_queue);
-            frames = 0;
-            *color_data = BLUE;
-            fill_maze(&m);
-            stack->len = 0;
-            push(stack, &current);
+        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+//            emptyQueue(&history_queue);
+//            frames = 0;
+            *color_data = MAGENTA;
+            frames++;
+            while (stack->len && !carve_step(&m, stack, &current)) {
+                enqueue(&history_queue, &current);
+            }
+            enqueue(&history_queue, &current);
+            color_step(&m, color_data, stack, frames);
+
         }
         if (IsMouseButtonReleased(MOUSE_BUTTON_RIGHT)) {
             fill_maze(&m);

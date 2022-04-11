@@ -14,6 +14,7 @@ Credit to Jamis Buck for teaching me this wonderful algorithm.
 #include <stdbool.h>
 #include "maze.h"
 #include "stack.h"
+#include "queue.h"
 
 // Fill a maze with walls, i.e. NONE values
 void fill_maze(struct maze *m) {
@@ -148,6 +149,29 @@ bool carve_step(struct maze *m, arr_stack_t *stack, pos_t *current) {
     }
     return hasNeighbours;
 }
+
+bool carve_step_with_history(struct maze *m, arr_stack_t *stack, pos_t *current, queue *q) {
+    int *cell = &m->data[(m->width * (*current).oy) + (*current).ox];
+    neighbour_t nb = get_neighbour((*current).ox, (*current).oy, m);
+    // no neighbours here, move on
+    bool hasNeighbours = (nb.ox != 0 || nb.oy != 0);
+    if (hasNeighbours) {
+        // Check if there's any path to the neighbour
+        // If not:
+        if (!(*cell & nb.direction) && *nb.data == NONE) {
+            *nb.data |= opposite[nb.direction]; // carved!
+            // carve self!
+            *cell |= nb.direction;
+            // recur!
+            push(stack, &((pos_t) {current->ox + nb.ox, current->oy + nb.oy}));
+            peek(stack, current);
+        }
+    } else {
+        pop(stack, current);
+    }
+    return hasNeighbours;
+}
+
 void carve_step_fishbone(struct maze *m, arr_stack_t *stack, pos_t *current) {
     int *cell = &m->data[(m->width * (*current).oy) + (*current).ox];
     neighbour_t nb = get_neighbour((*current).ox, (*current).oy, m);
