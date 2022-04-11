@@ -36,7 +36,7 @@ size_t enqueue(queue *q, void *data) {
 //    if (isFull(q))
 //        return q->nelem;
     memcpy((q->values) + (q->rear * q->elem_size), data, q->elem_size);
-    q->nelem++;
+    q->nelem++; // TODO Make the queue actually keep track of nelem properly ;-;
     q->rear = (q->rear + 1) % q->size;
     if (q->rear >= q->size)
         q->rear = 0;

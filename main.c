@@ -1,12 +1,15 @@
-#include <stdio.h>
+// Ray_Maze - Nokko's little Maze Generator, with a shiny new C front-end.
+
 #include <stdlib.h>
 #include <raylib.h>
+#include <string.h>
 #include "maze.h"
 #include "queue.h"
 #include "stack.h"
 
 #define VERSION "0.0.3"
 
+// TODO: Structs and loops instead of lots of function calls?
 void draw_row(maze_t *m, size_t offset, int x, int y, int cellWidth, Color color, Color *color_data) {
     int *data = m->data + offset;
     Color *color_p = (color_data + offset);
@@ -35,25 +38,52 @@ void draw_row(maze_t *m, size_t offset, int x, int y, int cellWidth, Color color
     }
 }
 
-void draw_maze(maze_t *m, int x, int y, int cwidth, Color *color_data) {
-    int width = m->width;
-    for (int row = 0; row < m->height; row++) {
-        draw_row(m, width * row, x,y+(cwidth*row),cwidth, BLACK, color_data);
+void draw_row_walls(maze_t *m, size_t offset, int x, int y, int cellWidth, Color color, Color *color_data) {
+    int *data = m->data + offset;
+    Color *color_p = (color_data + offset);
+    const int THIRD = cellWidth / 3;
+    // Go corner-by-corner:
+    for (int col = 0; col < m->width; col++) {
+        // Sometimes draw corners:
+//        if (*data & N & W)
+//            DrawRectangle(x, y, THIRD, THIRD, *color_p);
+//        if (*data & N & E)
+//            DrawRectangle(x+(2 * THIRD), y, THIRD, THIRD, *color_p);
+//        if (*data & S & W)
+//            DrawRectangle(x, y + (2 * THIRD), THIRD, THIRD, *color_p);
+//        if (*data & S & E)
+//            DrawRectangle(x+(2 * THIRD), y + (2 * THIRD), THIRD, THIRD, *color_p);
+
+        color_p = &(BLUE);
+        // Sometimes draw walls:
+        if (!(*data & N)) DrawRectangle(x, y, cellWidth, THIRD, *color_p);
+        if (!(*data & S)) DrawRectangle(x, y + (2 * THIRD), cellWidth, THIRD, *color_p);
+        if (!(*data & W)) DrawRectangle(x, y, THIRD, cellWidth, *color_p);
+        if (!(*data & E)) DrawRectangle(x + (2 * THIRD), y, THIRD, cellWidth, *color_p);
+
+        if (*data == NONE) {
+            DrawRectangle(x + THIRD, y + THIRD, THIRD, THIRD, *color_p);
+        }
+
+        x += cellWidth;
+        data++;
+        color_p++;
     }
 }
 
-bool colors_not_equal(Color first, Color second) {
-    bool eq = 1;
-    eq = eq && (first.r != second.r);
-    return 0;
+void draw_maze(maze_t *m, int x, int y, int cwidth, Color *color_data) {
+    int width = m->width;
+    for (int row = 0; row < m->height; row++) {
+        //draw_row(m, width * row, x,y+(cwidth*row),cwidth, BLACK, color_data);
+        draw_row_walls(m, width * row, x,y+(cwidth*row),cwidth, BLACK, color_data);
+    }
 }
 
-void color_step(maze_t *m, Color *color_data, arr_stack_t *stack, const unsigned int frames) {
+void color_step(maze_t *m, Color *color_data, arr_stack_t *stack, const unsigned int frames, float *hue_data) {
     pos_t last;
     const int size = m->width * m->height;
     if (peek(stack, &last) != 0) {
         Color *current = ((color_data + (last.oy * m->width)) + last.ox);
-        Vector3 hsv = ColorToHSV(RED);
         float factor = ((float) (frames % size)) / (float)(size);
         Color trans;
 //        if (factor < 0.33) {
@@ -63,8 +93,11 @@ void color_step(maze_t *m, Color *color_data, arr_stack_t *stack, const unsigned
 //        } else {
 //            trans = ColorAlphaBlend(WHITE, BLUE, ColorAlpha(WHITE, factor));
 //        }
-        trans = ColorAlphaBlend(ORANGE, MAGENTA, ColorAlpha(WHITE, factor));
-        Color result = ColorFromHSV(hsv.x, hsv.y, hsv.z);
+//        trans = ColorAlphaBlend(ORANGE, MAGENTA, ColorAlpha(WHITE, factor));
+       float *hue = ((hue_data + (last.oy * m->width)) + last.ox);
+       *hue = *hue + 60;
+
+        trans = ColorFromHSV(*hue, 1.0F, 0.7F);
         *current = trans;
     }
 }
@@ -94,6 +127,10 @@ int main(void) {
     const int offset_y = 2;
     // cell size, cwidth^2 pixels
     const int cwidth = 9;
+    float *hue_data = (float *) malloc(sideLength * sideLength * sizeof(float));
+    const float pattern = 60.0F;
+    memset_pattern4(hue_data,  &pattern, sideLength * sideLength * sizeof(float));
+
 
     queue history_queue;
     createQueue(&history_queue, 50, sizeof(pos_t));
@@ -102,16 +139,17 @@ int main(void) {
     push(stack, &current);
     while (!WindowShouldClose()) {
         BeginDrawing();
-        if (false && frames % 2 == 0 && stack->len > 0) {
-            for (int i = 0; i < 1 && stack->len > 0; i++) {
-                frames++;
-                while (stack->len && !carve_step(&m, stack, &current)) {
-                    enqueue(&history_queue, &current);
-                }
-                enqueue(&history_queue, &current);
-                color_step(&m, color_data, stack, frames);
-            }
-        }
+        // Generate passively…
+//        if (false && frames % 2 == 0 && stack->len > 0) {
+//            for (int i = 0; i < 1 && stack->len > 0; i++) {
+//                frames++;
+//                while (stack->len && !carve_step(&m, stack, &current)) {
+//                    enqueue(&history_queue, &current);
+//                }
+//                enqueue(&history_queue, &current);
+//                color_step(&m, color_data, stack, frames);
+//            }
+//        }
         ClearBackground(WHITE);
         DrawText("RayMaze!", screen_width - 30, 30, 20, LIGHTGRAY);
         draw_maze(&m,offset_x, offset_y, cwidth, (Color *) color_data);
@@ -126,23 +164,31 @@ int main(void) {
 //                          cwidth/3, cwidth/3,
 //                          BLUE);
         }
+        // Generate while LMB is held.
         if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+            if (!stack->len)
+                memset_pattern4(hue_data,  &pattern, sideLength * sideLength * sizeof(float));
 //            emptyQueue(&history_queue);
 //            frames = 0;
             *color_data = MAGENTA;
             frames++;
-            while (stack->len && !carve_step(&m, stack, &current)) {
-                enqueue(&history_queue, &current);
+            for (int i = 0; i < 60 && stack->len; i++) {
+                while (stack->len && !carve_step(&m, stack, &current)){
+                    enqueue(&history_queue, &current);
+                    color_step(&m, color_data, stack, frames, hue_data);
+                }
+                color_step(&m, color_data, stack, frames, hue_data);
             }
             enqueue(&history_queue, &current);
-            color_step(&m, color_data, stack, frames);
+            color_step(&m, color_data, stack, frames, hue_data);
 
         }
+        // Clear maze, clear generation stack.
         if (IsMouseButtonReleased(MOUSE_BUTTON_RIGHT)) {
             fill_maze(&m);
             stack->len = 1;
             peek(stack, &current);
-            stack->len = 0;
+//            stack->len = 0;
         }
         frames++;
         EndDrawing();
