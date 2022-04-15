@@ -49,6 +49,12 @@ void carve(int ox, int oy, maze_t *m);
 
 void carve_maze(maze_t *m);
 
+bool carve_from(struct maze *m, pos_t *place, struct neighbour *n);
+
 bool carve_step(struct maze *m, arr_stack_t *stack, pos_t *current);
+
+bool carve_step_fishbone(struct maze *m, arr_stack_t *stack, pos_t *current);
+
+int *get_cell(struct maze *m, pos_t *pos);
 
 #endif //RAY_MAZE_MAZE_H

@@ -1,13 +1,14 @@
 /**
 An implementation of the recursive backtracker maze
-generation algorithm in C. Implemented recursively.
+generation algorithm in C. Implemented recursively. <br/>
+<br/>
 
-Author: nokko
-Date: March 2nd
-Look on my works, ye mighty, and cringe at my horrible code.
+Author: nokko <br/>
+Date: March 2nd <br/>
+Look on my works, ye mighty, and cringe at my horrible code. <br/>
 
-Credit to Jamis Buck for teaching me this wonderful algorithm.
-(https://weblog.jamisbuck.org/2010/12/27/maze-generation-recursive-backtracking)
+Credit to Jamis Buck for teaching me this wonderful algorithm. <br/>
+(https://weblog.jamisbuck.org/2010/12/27/maze-generation-recursive-backtracking) <br/>
 **/
 
 #include <stdlib.h>
@@ -58,19 +59,17 @@ neighbour_t get_neighbour(int ox, int oy, struct maze *m) {
             }
         }
     }
-    neighbour_t out = {.ox=0, .oy=0};
     // No valid neighbours.
     if (count == 0) {
         // Can't keep going, return!
         //printf("can't get neighbour!\n");
-        return out;
+        return (struct neighbour) {.direction = NONE};
     }
     // Very wasteful, we throw away a lot of computation here.
     // Honestly, I've stopped caring.
     // PRO TIP: MAKE SURE YOU DON'T INDEX BY NEGATIVE VALUES.
     // THIS BUG TOOK AWAY VALUABLE HOURS OF MY LIFE.
-    out = neighbours[arc4random() % count];
-    return out;
+    return neighbours[arc4random() % count];
 }
 
 // LUT for opposite directions
@@ -99,7 +98,7 @@ void carve(int ox, int oy, struct maze *m) {
         // Pick a random neighbour.
         struct neighbour nb = get_neighbour(ox, oy, m);
         // No neighbours? Done!
-        if (nb.ox == 0 && nb.oy == 0) {
+        if (nb.direction == NONE) {
             return;
         }
 
@@ -128,26 +127,41 @@ void carve_iter(int ox, int oy, struct maze *m) {
     free_stack(stack);
 }
 
-bool carve_step(struct maze *m, arr_stack_t *stack, pos_t *current) {
-    int *cell = &m->data[(m->width * (*current).oy) + (*current).ox];
-    neighbour_t nb = get_neighbour((*current).ox, (*current).oy, m);
-    // no neighbours here, move on
-    bool hasNeighbours = (nb.ox != 0 || nb.oy != 0);
+int *get_cell(struct maze *m, pos_t *pos) {
+    return &m->data[(m->width * (*pos).oy) + (*pos).ox];
+}
+
+bool carve_from(struct maze *m, pos_t *place, struct neighbour *n) {
+    neighbour_t nb = get_neighbour((*place).ox, (*place).oy, m);
+    bool hasNeighbours = (nb.direction != NONE);
     if (hasNeighbours) {
-        // Check if there's any path to the neighbour
-        // If not:
-        if (!(*cell & nb.direction) && *nb.data == NONE) {
+        int *cell = get_cell(m, place);
+        if (!(*cell & nb.direction)) {
             *nb.data |= opposite[nb.direction]; // carved!
             // carve self!
             *cell |= nb.direction;
-            // recur!
-            push(stack, &((pos_t) {current->ox + nb.ox, current->oy + nb.oy}));
-            peek(stack, current);
+            *n = nb;
         }
+    }
+    *place = (pos_t) {nb.ox + place->ox, nb.oy + place->oy};
+    return hasNeighbours;
+}
+
+bool carve_step(struct maze *m, arr_stack_t *stack, pos_t *current) {
+//    int *cell = &m->data[(m->width * (*current).oy) + (*current).ox];
+//    neighbour_t nb = get_neighbour((*current).ox, (*current).oy, m);
+    // no neighbours here, move on
+//    bool hasNeighbours = (nb.ox != 0 || nb.oy != 0);
+    bool hasCarved = carve_from(m, current, &(struct neighbour) {});
+    if (hasCarved) {
+        // Check if there's any path to the neighbour
+        // If not:
+        push(stack, &((pos_t) {current->ox, current->oy}));
+        peek(stack, current);
     } else {
         pop(stack, current);
     }
-    return hasNeighbours;
+    return hasCarved;
 }
 
 bool carve_step_with_history(struct maze *m, arr_stack_t *stack, pos_t *current, queue *q) {
@@ -172,7 +186,7 @@ bool carve_step_with_history(struct maze *m, arr_stack_t *stack, pos_t *current,
     return hasNeighbours;
 }
 
-void carve_step_fishbone(struct maze *m, arr_stack_t *stack, pos_t *current) {
+bool carve_step_fishbone(struct maze *m, arr_stack_t *stack, pos_t *current) {
     int *cell = &m->data[(m->width * (*current).oy) + (*current).ox];
     neighbour_t nb = get_neighbour((*current).ox, (*current).oy, m);
     // no neighbours here, move on
@@ -187,8 +201,10 @@ void carve_step_fishbone(struct maze *m, arr_stack_t *stack, pos_t *current) {
             push(stack, &((pos_t) {current->ox + nb.ox, current->oy + nb.oy}));
 //            peek(stack, current);
         }
+        return true;
     } else {
         pop(stack, current);
+        return false;
     }
 }
 

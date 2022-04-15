@@ -1,5 +1,8 @@
 //
 // Created by Nokko on 2022-04-10.
+// Simple arbitrary-datatype queue impl.
+// Sort of janky, but works for a least-recently-used queue.
+// TODO: Comments.
 //
 
 #include "queue.h"
@@ -33,10 +36,9 @@ bool isFull(queue *q) {
 }
 
 size_t enqueue(queue *q, void *data) {
-//    if (isFull(q))
-//        return q->nelem;
     memcpy((q->values) + (q->rear * q->elem_size), data, q->elem_size);
-    q->nelem++; // TODO Make the queue actually keep track of nelem properly ;-;
+    if (!isFull(q))
+        q->nelem++;
     q->rear = (q->rear + 1) % q->size;
     if (q->rear >= q->size)
         q->rear = 0;
@@ -44,7 +46,7 @@ size_t enqueue(queue *q, void *data) {
 }
 
 size_t dequeue(queue *q, void *dest) {
-    if (isEmpty(q))       //empty queue
+    if (isEmpty(q))
         return q->nelem;
     memcpy(dest, &q->values[q->front], q->elem_size);
     q->front = (q->front + 1) % q->size;
