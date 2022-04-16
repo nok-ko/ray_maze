@@ -207,15 +207,24 @@ int main(void) {
         const float BASELINE = 700.0f;
         const float LEFT_MARGIN = 48.0f;
         float x = LEFT_MARGIN;
-        if(GuiButton((Rectangle){x, BASELINE, 192, 32}, "Generate")) {
+        if(GuiButton((Rectangle){x, BASELINE, 80, 32}, "Generate!")) {
             shouldGenerate = true;
             fill_maze(&m);
             memset(color_data, 0, m.width * m.height * sizeof(Color));
             stack->len = 1;
         }
 
+        if(GuiButton((Rectangle){x += 16 + 80, BASELINE, 80, 32}, "Reset!")) {
+            fill_maze(&m);
+            memset(color_data, 0, m.width * m.height * sizeof(Color));
+            stack->len = 1;
+            peek(stack, &current);
+            stack->len = 0;
+            steps = 0;
+        }
+
         slider = GuiSliderBar(
-                (Rectangle){(x += 192 + 16), BASELINE, 192, 32},
+                (Rectangle){(x += 80 + 16), BASELINE, 192, 32},
                 "-", "+",
                 slider, 0.0f, 60.0f);
 
@@ -256,7 +265,7 @@ int main(void) {
                         GetColor(GuiGetStyle(BUTTON, TEXT_COLOR_NORMAL)));
 
         // “Show Maze” Checkbox:
-        showMaze = GuiCheckBox((Rectangle) {x += (192 + 16), y, 32, 32}, "Show Maze?", showMaze);
+        showMaze = GuiCheckBox((Rectangle) {x += (176 + 16), y, 32, 32}, "Show Maze?", showMaze);
         if (showMaze)
             GuiDrawIcon(RAYGUI_ICON_EYE_ON, x, y, 2,
                     GetColor(GuiGetStyle(BUTTON, TEXT_COLOR_DISABLED)));
@@ -319,9 +328,9 @@ int main(void) {
                     }
                 }
                 // Extra colour step after exiting the loop
-                if (!carved_new) {
+                if (carved_new) {
                     push(stack, &last);
-                    color_step(&m, color_data, stack, steps, RED, RED);
+//                    color_step(&m, color_data, stack, steps, RED, RED);
                     pop(stack, &last);
                     steps++;
                 }
@@ -337,7 +346,6 @@ int main(void) {
             fill_maze(&m);
             stack->len = 1;
             peek(stack, &current);
-//            stack->len = 0;
         }
         steps++;
         EndDrawing();
