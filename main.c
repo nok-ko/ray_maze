@@ -1,44 +1,53 @@
 // Ray_Maze - Nokko's little Maze Generator, with a shiny new C front-end.
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <raylib.h>
 #include <string.h>
+
+#define RAYGUI_IMPLEMENTATION
+#include "raygui.h"                     // Required for: IMGUI controls
+
+#undef RAYGUI_IMPLEMENTATION            // Avoid including raygui implementation again
+
+#include "style_cyber.h"
+
 #include "maze.h"
 #include "queue.h"
 #include "stack.h"
 
-#define VERSION "0.0.3"
+#define VERSION "0.1.3"
 
 // TODO: Structs and loops instead of lots of function calls?
-void draw_row(maze_t *m, size_t offset, int x, int y, int cellWidth, Color color, Color *color_data) {
+void draw_row(maze_t *m, size_t offset, int x, int y, int cellWidth, Color *color_data) {
     int *data = m->data + offset;
-    Color *color_p = (color_data + offset);
+//    Color *color_p = (color_data + offset);
     const int THIRD = cellWidth / 3;
     // Go corner-by-corner:
     for (int col = 0; col < m->width; col++) {
-        // Draw background
+        // Draw center
         if (*data != NONE)
-            DrawRectangle(x, y, cellWidth, cellWidth, WHITE);
+            DrawRectangle(x + THIRD, y + THIRD, THIRD, THIRD, WHITE);
 
-        // Always draw corners:
-        DrawRectangle(x, y, THIRD, THIRD, *color_p);
-        DrawRectangle(x+(2 * THIRD), y, THIRD, THIRD, *color_p);
-        DrawRectangle(x, y + (2 * THIRD), THIRD, THIRD, *color_p);
-        DrawRectangle(x+(2 * THIRD), y + (2 * THIRD), THIRD, THIRD, *color_p);
+//        // Always draw corners:
+//        DrawRectangle(x, y, THIRD, THIRD, *color_p);
+//        DrawRectangle(x+(2 * THIRD), y, THIRD, THIRD, *color_p);
+//        DrawRectangle(x, y + (2 * THIRD), THIRD, THIRD, *color_p);
+//        DrawRectangle(x+(2 * THIRD), y + (2 * THIRD), THIRD, THIRD, *color_p);
 
         // Sometimes do the openings:
-        if (!(*data & N)) DrawRectangle(x + THIRD, y, THIRD, THIRD, *color_p);
-        if (!(*data & S)) DrawRectangle(x + THIRD, y + (2 * THIRD), THIRD, THIRD, *color_p);
-        if (!(*data & W)) DrawRectangle(x, y + THIRD, THIRD, THIRD, *color_p);
-        if (!(*data & E)) DrawRectangle(x + (2 * THIRD), y + THIRD, THIRD, THIRD, *color_p);
+        if ((*data & N)) DrawRectangle(x + THIRD, y, THIRD, THIRD, WHITE);
+        if ((*data & S)) DrawRectangle(x + THIRD, y + (2 * THIRD), THIRD, THIRD, WHITE);
+        if ((*data & W)) DrawRectangle(x, y + THIRD, THIRD, THIRD, WHITE);
+        if ((*data & E)) DrawRectangle(x + (2 * THIRD), y + THIRD, THIRD, THIRD, WHITE);
 
         if (*data == NONE) {
-            DrawRectangle(x + THIRD, y + THIRD, THIRD, THIRD, *color_p);
+//            DrawRectangle(x + THIRD, y + THIRD, THIRD, THIRD, BLACK);
         }
 
         x += cellWidth;
         data++;
-        color_p++;
+//        color_p++;
     }
 }
 
@@ -48,6 +57,11 @@ void draw_row_walls(maze_t *m, size_t offset, int x, int y, int cellWidth, Color
     const int THIRD = cellWidth / 3;
     // Go corner-by-corner:
     for (int col = 0; col < m->width; col++) {
+
+        if (*data == NONE) {
+            DrawRectangle(x + THIRD, y + THIRD, THIRD, THIRD, *color_p);
+            goto loop_end;
+        }
         // Sometimes draw corners:
 //        if (*data & N & W)
 //            DrawRectangle(x, y, THIRD, THIRD, *color_p);
@@ -65,10 +79,7 @@ void draw_row_walls(maze_t *m, size_t offset, int x, int y, int cellWidth, Color
         if (!(*data & W)) DrawRectangle(x, y, THIRD, cellWidth, *color_p);
         if (!(*data & E)) DrawRectangle(x + (2 * THIRD), y, THIRD, cellWidth, *color_p);
 
-        if (*data == NONE) {
-            DrawRectangle(x + THIRD, y + THIRD, THIRD, THIRD, *color_p);
-        }
-
+        loop_end:
         x += cellWidth;
         data++;
         color_p++;
@@ -79,11 +90,11 @@ void draw_maze(maze_t *m, int x, int y, int cwidth, Color *color_data) {
     int width = m->width;
     for (int row = 0; row < m->height; row++) {
         //draw_row(m, width * row, x,y+(cwidth*row),cwidth, BLACK, color_data);
-        draw_row(m, width * row, x,y+(cwidth*row),cwidth, BLACK, color_data);
+        draw_row(m, width * row, x,y+(cwidth*row),cwidth, color_data);
     }
 }
 
-void color_step(maze_t *m, Color *color_data, arr_stack_t *stack, const unsigned int frames, float *hue_data, Color from, Color to) {
+void color_step(maze_t *m, Color *color_data, arr_stack_t *stack, const unsigned int frames, Color from, Color to) {
     pos_t last;
     const int size = m->width * m->height;
     if (peek(stack, &last) != 0) {
@@ -109,10 +120,10 @@ enum ColorAlgorithm {
 };
 
 // Change the given colour based on whichever algo you like
-void change_color(Color *color, unsigned int frames, enum ColorAlgorithm algo, struct maze *m) {
+void change_color(Color *color, unsigned int frames, enum ColorAlgorithm algo, struct maze *m, Color gradientStart, Color gradientEnd) {
     if (algo == GRADIENT) {
         float factor = ((float) (frames % m->height * m->width)) / (float)(m->height * m->width);
-        *color = ColorAlphaBlend(ORANGE, MAGENTA, ColorAlpha(WHITE, factor));
+        *color = ColorAlphaBlend(gradientStart,gradientEnd, ColorAlpha(WHITE, factor));
     } else if (algo == VISITED) {
 //       float *hue = ((hue_data + (last.oy * m->width)) + last.ox);
 //       *hue = *hue + 60;
@@ -122,11 +133,22 @@ void change_color(Color *color, unsigned int frames, enum ColorAlgorithm algo, s
     }
 }
 
+void draw_colours(const maze_t *m, const int x, const int y, const int cwidth, Color *color_p) {
+    for (int oy = 0; oy < m->height; oy++) {
+        for (int ox = 0; ox < m->width; ox++) {
+            DrawRectangle(ox*cwidth, oy*cwidth, cwidth, cwidth,
+                          *((color_p + oy *m->width) + ox));
+        }
+    }
+
+}
+
 int main(void) {
     const int screen_height = 800;
     const int screen_width = 900;
 
     InitWindow(screen_height, screen_width, "RayMaze " VERSION);
+    GuiLoadStyleCyber();
     SetTargetFPS(60);
 
     // Generate maze;
@@ -138,47 +160,117 @@ int main(void) {
 
     Color *color_data = calloc(sideLength*sideLength, sizeof(Color));
 
-    unsigned int frames = 0;
+    unsigned int steps = 0;
     size_t initial_cap = (m.width * m.height) / 4;
     arr_stack_t *stack = new_stack(sizeof(pos_t), initial_cap);
     pos_t current = {0, 0};
 
-    const int offset_x = 2;
-    const int offset_y = 2;
+    const int offset_x = 0;
+    const int offset_y = 0;
     // cell size, cwidth^2 pixels
-    const int cwidth = 9;
-    float *hue_data = (float *) malloc(sideLength * sideLength * sizeof(float));
+    const int cwidth = 6;
+//    float *hue_data = (float *) malloc(sideLength * sideLength * sizeof(float));
     const float pattern = 60.0F;
-    memset_pattern4(hue_data,  &pattern, sideLength * sideLength * sizeof(float));
 
+    // HACK: This only works on Mac (maybe BSD?), whoops.
+//    memset_pattern4(hue_data,  &pattern, sideLength * sideLength * sizeof(float));
 
-    struct history_el {int ox; int oy; bool shouldCarve};
+    struct history_el {int ox; int oy; bool shouldCarve;};
 
     queue history_queue;
     createQueue(&history_queue, 50, sizeof(struct history_el));
     fill_maze(&m);
     stack->len = 0;
     push(stack, &current);
+
+    // UI State
+    bool shouldGenerate = false;
+    float slider = 1.0f;
+    Color gradientStartColor = BLUE;
+    Color gradientEndColor = GREEN;
+    unsigned int hoverTime = 0;
+    bool showColours = true;
+    bool showMaze = true;
+
     while (!WindowShouldClose()) {
         BeginDrawing();
-        // Generate passively…
-//        if (false && frames % 2 == 0 && stack->len > 0) {
-//            for (int i = 0; i < 1 && stack->len > 0; i++) {
-//                frames++;
-//                while (stack->len && !carve_step(&m, stack, &current)) {
-//                    enqueue(&history_queue, &current);
-//                }
-//                enqueue(&history_queue, &current);
-//                color_step(&m, color_data, stack, frames);
-//            }
-//        }
         ClearBackground(BLACK);
         DrawText("RayMaze!", screen_width - 30, 30, 20, LIGHTGRAY);
-        draw_maze(&m,offset_x, offset_y, cwidth, (Color *) color_data);
-//            DrawRectangle(offset_x + (cwidth * current.ox) + (cwidth/3),
-//                          offset_y + (cwidth * current.oy) + (cwidth/3),
-//                          cwidth/3, cwidth/3,
-//                          MAGENTA);
+
+        if (showColours)
+            draw_colours(&m, offset_x, offset_y, cwidth, (Color *) color_data);
+
+        if (showMaze)
+            draw_maze(&m,offset_x, offset_y, cwidth, (Color *) color_data);
+
+        GuiEnable();
+        const float BASELINE = 700.0f;
+        const float LEFT_MARGIN = 48.0f;
+        float x = LEFT_MARGIN;
+        if(GuiButton((Rectangle){x, BASELINE, 192, 32}, "Generate")) {
+            shouldGenerate = true;
+            fill_maze(&m);
+            memset(color_data, 0, m.width * m.height * sizeof(Color));
+            stack->len = 1;
+        }
+
+        slider = GuiSliderBar(
+                (Rectangle){(x += 192 + 16), BASELINE, 192, 32},
+                "-", "+",
+                slider, 0.0f, 60.0f);
+
+        Rectangle button_bounds = {(x += 192 + 16), BASELINE, 32, 32};
+        if(GuiButton(button_bounds, "R")) {
+            slider = 1.0f;
+        }
+
+        Vector2 mousePos = GetMousePosition();
+        // Tooltip
+        if(CheckCollisionPointRec(mousePos, button_bounds)) {
+            if (hoverTime > 20) {
+                Color strokeColor = GetColor(GuiGetStyle(BUTTON, BORDER_COLOR_NORMAL));
+                Color fillColor = GetColor(GuiGetStyle(BUTTON, BASE_COLOR_NORMAL));
+                Color textColor = GetColor(GuiGetStyle(BUTTON, TEXT_COLOR_NORMAL));
+                int borderWidth = GuiGetStyle(BUTTON, BORDER_WIDTH);
+                Rectangle tooltipBounds = (Rectangle) {mousePos.x, mousePos.y - 16.0f, 96, 32};
+                GuiDrawRectangle(tooltipBounds, borderWidth, strokeColor, fillColor);
+                GuiDrawText("Reset Speed", tooltipBounds, GUI_TEXT_ALIGN_CENTER,textColor);
+            } else {
+                hoverTime++;
+            }
+        } else {
+            hoverTime = 0;
+        }
+
+        // Next row
+        x = LEFT_MARGIN;
+        float y = BASELINE - 40.0f;
+
+        // “Show Colours” Checkbox:
+        showColours = GuiCheckBox((Rectangle) {x, y, 32, 32}, "Show Colours?", showColours);
+        if (showColours)
+            GuiDrawIcon(RAYGUI_ICON_EYE_ON, x, y, 2,
+                        GetColor(GuiGetStyle(BUTTON, TEXT_COLOR_DISABLED)));
+        else
+            GuiDrawIcon(RAYGUI_ICON_EYE_ON, x, y, 2,
+                        GetColor(GuiGetStyle(BUTTON, TEXT_COLOR_NORMAL)));
+
+        // “Show Maze” Checkbox:
+        showMaze = GuiCheckBox((Rectangle) {x += (192 + 16), y, 32, 32}, "Show Maze?", showMaze);
+        if (showMaze)
+            GuiDrawIcon(RAYGUI_ICON_EYE_ON, x, y, 2,
+                    GetColor(GuiGetStyle(BUTTON, TEXT_COLOR_DISABLED)));
+        else
+            GuiDrawIcon(RAYGUI_ICON_EYE_ON, x, y, 2,
+                    GetColor(GuiGetStyle(BUTTON, TEXT_COLOR_NORMAL)));
+
+        // Gradient Colour Pickers:
+        if (shouldGenerate) GuiDisable();
+        gradientStartColor = GuiColorPicker((Rectangle){(x += 32), y - 80, 64, 64},
+                                            "Gradient Start", gradientStartColor);
+        gradientEndColor = GuiColorPicker((Rectangle){(x += 96), y - 80, 64, 64},
+                                          "Gradient End", gradientEndColor);
+        if (shouldGenerate) GuiEnable();
 
         // Carve through history…
         for (size_t i = 0; i < history_queue.size && isFull(&history_queue); i++) {
@@ -192,33 +284,52 @@ int main(void) {
             if ((arc4random() % 100 > 50) && n.direction != NONE && isFull(&history_queue) && el->shouldCarve) {
                 carve_from(&m, &(pos_t) {el->ox, el->oy}, &n);
                 push(stack, &((pos_t) {el->ox+n.ox, el->oy+n.oy}));
-                change_color(color_data + (el->oy * m.width) + el->ox, frames, GRADIENT, &m);
-                change_color(color_data + ((el->oy+n.oy) * m.width) + el->ox+n.ox, frames, GRADIENT, &m);
+                change_color(color_data + (el->oy * m.width) + el->ox, steps, GRADIENT, &m, gradientStartColor, gradientEndColor);
+                change_color(color_data + ((el->oy+n.oy) * m.width) + el->ox+n.ox, steps, GRADIENT, &m, gradientStartColor, gradientEndColor);
                 el->shouldCarve = false;
             }
         }
 
-        // Generate while LMB is held.
-        if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+        if (shouldGenerate) {
             if (!stack->len) {
-                memset_pattern4(hue_data, &pattern, sideLength * sideLength * sizeof(float));
                 emptyQueue(&history_queue);
-                frames = 0;
+                steps = 0;
             }
-            *color_data = MAGENTA;
-            for (int i = 0; i < 3 && stack->len; i++) {
-                frames++;
-                while (stack->len && !carve_step(&m, stack, &current)){
-                    enqueue(&history_queue, &(struct history_el) {current.ox, current.oy, true});
-                    color_step(&m, color_data, stack, frames, hue_data,ORANGE,MAGENTA);
-//                    change_color((color_data + (m.width * current.oy) + current.ox), frames, VISITED, &m);
-                    frames++;
+            if (steps == 0) {
+                *color_data = gradientStartColor;
+            }
+            bool last_carved_new = false;
+            bool carved_new = true;
+            for (int i = 0; i < (int) (slider) && stack->len; i++) {
+                steps++;
+                pos_t last = {0, 0};
+                // This loop is here to skip backtracking steps, and do some other stuff (colours) during backtracking.
+                for (;stack->len;) {
+                    carved_new = carve_step(&m, stack, &current);
+                    // We just backtracked!
+                    if (!carved_new) {
+                        // Colour in while backtracking :)
+                        color_step(&m, color_data, stack, steps, gradientStartColor, gradientEndColor);
+                        steps++;
+                    } else {
+                        // Didn't backtrack, so don't skip!
+                        color_step(&m, color_data, stack, steps, gradientStartColor, gradientEndColor);
+                        steps++;
+                        break;
+                    }
                 }
-                color_step(&m, color_data, stack, frames, hue_data, BLACK, BLACK);
-//                change_color((color_data + (m.width * current.oy) + current.ox), frames, VISITED, &m);
+                // Extra colour step after exiting the loop
+                if (!carved_new) {
+                    push(stack, &last);
+                    color_step(&m, color_data, stack, steps, RED, RED);
+                    pop(stack, &last);
+                    steps++;
+                }
             }
             enqueue(&history_queue, &(struct history_el) {current.ox, current.oy, true});
-            color_step(&m, color_data, stack, frames, hue_data, BLACK, BLACK);
+            if (!stack->len) {
+                shouldGenerate = false;
+            }
 
         }
         // Clear maze, clear generation stack.
@@ -228,7 +339,7 @@ int main(void) {
             peek(stack, &current);
 //            stack->len = 0;
         }
-        frames++;
+        steps++;
         EndDrawing();
     }
 
