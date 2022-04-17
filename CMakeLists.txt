@@ -10,9 +10,10 @@ include_directories(include)
 add_library(stack stack.c)
 add_library(queue queue.c)
 add_library(maze_gen maze.c)
+add_library(export export.c)
 add_executable(ray_maze main.c)
 
-target_link_libraries(ray_maze raylib maze_gen stack queue)
+target_link_libraries(ray_maze raylib maze_gen stack queue export)
 
 # Checks if OSX and links appropriate frameworks (only required on MacOS)
 if (APPLE)

@@ -6,6 +6,7 @@
 #ifndef RAY_MAZE_MAZE_H
 #define RAY_MAZE_MAZE_H
 
+#include <stdbool.h>
 #include "stack.h"
 
 // A maze is represented as pointer to the beginning of a `data` array,

@@ -1,7 +1,6 @@
 // Ray_Maze - Nokko's little Maze Generator, with a shiny new C front-end.
 
 #include <stdlib.h>
-#include <stdio.h>
 #include <raylib.h>
 #include <string.h>
 
@@ -15,6 +14,7 @@
 #include "maze.h"
 #include "queue.h"
 #include "stack.h"
+#include "export.h"
 
 #define VERSION "0.1.3"
 
@@ -152,7 +152,7 @@ int main(void) {
     SetTargetFPS(60);
 
     // Generate maze;
-    const int sideLength = 80;
+    const int sideLength = 81;
     int *box_data = (int *) calloc(sideLength*sideLength, sizeof(int));
     maze_t m = {box_data, sideLength, sideLength};
     fill_maze(&m);
@@ -255,7 +255,7 @@ int main(void) {
         x = LEFT_MARGIN;
         float y = BASELINE - 40.0f;
 
-        // “Show Colours” Checkbox:
+            // “Show Colours” Checkbox:
         showColours = GuiCheckBox((Rectangle) {x, y, 32, 32}, "Show Colours?", showColours);
         if (showColours)
             GuiDrawIcon(RAYGUI_ICON_EYE_ON, x, y, 2,
@@ -280,6 +280,24 @@ int main(void) {
         gradientEndColor = GuiColorPicker((Rectangle){(x += 96), y - 80, 64, 64},
                                           "Gradient End", gradientEndColor);
         if (shouldGenerate) GuiEnable();
+
+        // Next row
+        x = LEFT_MARGIN;
+        y -= 40.0f;
+
+        GuiDisable();
+        if(GuiButton((Rectangle){x, y, 160, 32}, "Dump to \"maze.rawmaz\"")) {
+//            struct maze_dump *md = dump_unpacked(&m, "./maze.rawmaz");
+//            free(md->dump);
+//            free(md);
+        }
+        GuiEnable();
+
+        if(GuiButton((Rectangle){x += 192, y, 160, 32}, "Dump to \".MAZ\" file")) {
+            write_maz(&m, PM_Packed, "realmaze.maz");
+        }
+
+
 
         // Carve through history…
         for (size_t i = 0; i < history_queue.size && isFull(&history_queue); i++) {
