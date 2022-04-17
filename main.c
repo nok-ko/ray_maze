@@ -15,6 +15,7 @@
 #include "queue.h"
 #include "stack.h"
 #include "export.h"
+#include "import.h"
 
 #define VERSION "0.1.3"
 
@@ -192,6 +193,10 @@ int main(void) {
     bool showColours = true;
     bool showMaze = true;
 
+    char *filename_buf = malloc(sizeof(char) * 50);
+    strcpy(filename_buf, "realmaze.maz");
+    bool editing_filename = false;
+
     while (!WindowShouldClose()) {
         BeginDrawing();
         ClearBackground(BLACK);
@@ -275,9 +280,9 @@ int main(void) {
 
         // Gradient Colour Pickers:
         if (shouldGenerate) GuiDisable();
-        gradientStartColor = GuiColorPicker((Rectangle){(x += 32), y - 80, 64, 64},
+        gradientStartColor = GuiColorPicker((Rectangle){(x += 32), y - 140, 64, 64},
                                             "Gradient Start", gradientStartColor);
-        gradientEndColor = GuiColorPicker((Rectangle){(x += 96), y - 80, 64, 64},
+        gradientEndColor = GuiColorPicker((Rectangle){(x += 96), y - 140, 64, 64},
                                           "Gradient End", gradientEndColor);
         if (shouldGenerate) GuiEnable();
 
@@ -294,6 +299,28 @@ int main(void) {
         if(GuiButton((Rectangle){x += 192, y, 160, 32}, "Dump to \".MAZ\" file")) {
             write_maz(&m, PM_Packed, "realmaze.maz");
         }
+
+        Rectangle textbox_bounds = (Rectangle){x += 192, y, 160, 24};
+
+        bool lmb_just_released = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
+        if (lmb_just_released && CheckCollisionPointRec(mousePos, textbox_bounds)) {
+            editing_filename = true;
+        } else if (lmb_just_released) {
+            editing_filename = false;
+        }
+
+        GuiTextBox(textbox_bounds, filename_buf, 50,editing_filename);
+
+        if (GuiButton((Rectangle) {x, y += 40, 160, 32}, "Read .MAZ File")) {
+            struct maze *mptr = read_maz(filename_buf);
+            int *old_data = m.data;
+            m.data = mptr->data;
+            free(old_data);
+            free(mptr);
+            GuiDisable();
+        }
+
+
 
 
 
@@ -372,5 +399,6 @@ int main(void) {
     free_stack(stack);
     free(color_data);
     free(history_queue.values);
+    free(filename_buf);
     return 0;
 }
