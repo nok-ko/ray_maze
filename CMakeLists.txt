@@ -15,6 +15,13 @@ if (MSVC)
 else()
     # lots of warnings and all warnings as errors
     add_compile_options(-Wall -Wextra -pedantic -Wmissing-braces)
+    # TODO: Actually fix all the problems ASAN finds…
+
+    if ($ENV{USE_ASAN})
+        # Address Sanitizer
+        add_compile_options(-O1 -g -fsanitize=address)
+        add_link_options(-g -fsanitize=address)
+    endif()
 endif()
 
 add_library(stack stack.c)
