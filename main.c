@@ -285,13 +285,11 @@ int main(void) {
         x = LEFT_MARGIN;
         y -= 40.0f;
 
-        GuiDisable();
-        if(GuiButton((Rectangle){x, y, 160, 32}, "Dump to \"maze.rawmaz\"")) {
-//            struct maze_dump *md = dump_unpacked(&m, "./maze.rawmaz");
-//            free(md->dump);
-//            free(md);
+//        GuiDisable();
+        if(GuiButton((Rectangle){x, y, 160, 32}, "Dump unpacked")) {
+            write_maz(&m, PM_Unpacked, "unpacked.maz");
         }
-        GuiEnable();
+//        GuiEnable();
 
         if(GuiButton((Rectangle){x += 192, y, 160, 32}, "Dump to \".MAZ\" file")) {
             write_maz(&m, PM_Packed, "realmaze.maz");
