@@ -62,13 +62,12 @@ struct maze_dump *dump_packed(struct maze *m) {
     md->size = size;
 
     unsigned char *dmp = dump;
-    // TODO: Test for odd-length mazes
     for (int *d = m->data; d < (m->data + real_size); d++, dmp++) {
         // We'll read two bits in one go, and write one.
         // High bits:
         *dmp = '\0' | (*(d++) << 4);
         // Check that we're not over the bounds (again):
-        if (d > m->data + real_size) break;
+        if (d >= m->data + real_size) break;
         // Safe, so write the low bits:
         *dmp |= *d;
     }
