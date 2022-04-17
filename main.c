@@ -315,6 +315,7 @@ int main(void) {
             struct maze *mptr = read_maz(filename_buf);
             int *old_data = m.data;
             m.data = mptr->data;
+            box_data = m.data;
             free(old_data);
             free(mptr);
             GuiDisable();
@@ -395,6 +396,7 @@ int main(void) {
     }
 
     CloseWindow();
+    // Double-free, apparently
     free(box_data);
     free_stack(stack);
     free(color_data);
