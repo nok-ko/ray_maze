@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="ray_maze" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" WORKING_DIR="file://$PROJECT_DIR$/run" PASS_PARENT_ENVS_2="true" PROJECT_NAME="ray_maze" TARGET_NAME="ray_maze" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="ray_maze" RUN_TARGET_NAME="ray_maze">
+    <envs>
+      <env name="LIBC_FATAL_STDERR_" value="1" />
+    </envs>
+    <method v="2">
+      <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+    </method>
+  </configuration>
+</component>
