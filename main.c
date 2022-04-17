@@ -292,12 +292,12 @@ int main(void) {
 
 //        GuiDisable();
         if(GuiButton((Rectangle){x, y, 160, 32}, "Dump unpacked")) {
-            write_maz(&m, PM_Unpacked, "unpacked.maz");
+            write_maz(&m, PM_Unpacked, filename_buf);
         }
 //        GuiEnable();
 
         if(GuiButton((Rectangle){x += 192, y, 160, 32}, "Dump to \".MAZ\" file")) {
-            write_maz(&m, PM_Packed, "realmaze.maz");
+            write_maz(&m, PM_Packed, filename_buf);
         }
 
         Rectangle textbox_bounds = (Rectangle){x += 192, y, 160, 24};
