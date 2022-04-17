@@ -1,5 +1,7 @@
 //
 // Created by Nokko on 2022-04-09.
+// Simple arbitrary-datatype stack impl.
+// TODO: Comments.
 //
 
 #include <stdlib.h>

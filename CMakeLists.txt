@@ -1,31 +1,31 @@
 cmake_minimum_required(VERSION 3.21)
 project(ray_maze C)
 
-# Dependencies
-find_package(raylib 4.0.0 QUIET) # QUIET or REQUIRED
-if (NOT raylib_FOUND) # If there's none, fetch and build raylib
-    include(FetchContent)
-    FetchContent_Declare(
-            raylib
-            URL https://github.com/raysan5/raylib/archive/refs/tags/4.0.0.tar.gz
-    )
-    FetchContent_GetProperties(raylib)
-    if (NOT raylib_POPULATED) # Have we downloaded raylib yet?
-        set(FETCHCONTENT_QUIET NO)
-        FetchContent_Populate(raylib)
-        set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE) # don't build the supplied examples
-        add_subdirectory(${raylib_SOURCE_DIR} ${raylib_BINARY_DIR})
-    endif()
-endif()
 
+# Dependencies
 set(CMAKE_C_STANDARD 11) # Requires C11 standard
+add_subdirectory(raylib)
+
+include_directories(include)
+
+# All warnings/errors for the code we wrote:
+if (MSVC)
+    # warning level 4 and all warnings as errors
+    add_compile_options(/W4 /WX)
+else()
+    # lots of warnings and all warnings as errors
+    add_compile_options(-Wall -Wextra -pedantic -Wmissing-braces)
+endif()
 
 add_library(stack stack.c)
 add_library(queue queue.c)
 add_library(maze_gen maze.c)
+add_library(export export.c)
+add_library(import import.c)
 add_executable(ray_maze main.c)
 
-target_link_libraries(ray_maze raylib maze_gen stack queue)
+target_link_libraries(ray_maze raylib maze_gen stack queue export import)
+
 
 # Checks if OSX and links appropriate frameworks (only required on MacOS)
 if (APPLE)
