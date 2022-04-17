@@ -47,7 +47,12 @@ size_t push(arr_stack_t *stack, void *data) {
 }
 
 size_t peek(arr_stack_t *stack, void *dest) {
-    if ((stack->len - 1) < 0) return 0;
+    if (stack->len == 0) {
+        return 0;
+    }
+    if ((stack->len - 1) <= 0) {
+        return 0;
+    }
     memcpy(dest, stack->data + (stack->len - 1) * stack->element_size, stack->element_size);
     return stack->len;
 }
