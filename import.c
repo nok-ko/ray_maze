@@ -38,7 +38,7 @@ struct maze *unpack_maz(struct packed_chunk *chunk) {
         }
 
         if (packed && mp < m->data + mdata_len) {
-            *mp = (nibble_mask ^ 255 & *d); // Second nibble (if packed), no shift
+            *mp = ((nibble_mask ^ 255) & *d); // Second nibble (if packed), no shift
         }
     }
 
