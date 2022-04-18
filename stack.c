@@ -39,7 +39,7 @@ void realloc_stack(arr_stack_t *stack) {
 
 size_t push(arr_stack_t *stack, void *data) {
     stack->len += 1;
-    if (stack->len > stack->cap) {
+    if ((stack->len * stack->element_size) > stack->cap) {
         realloc_stack(stack);
     }
     memcpy(stack->data + (stack->len - 1) * stack->element_size, data, stack->element_size);
