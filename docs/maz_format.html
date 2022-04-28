@@ -1,0 +1,357 @@
+<html>
+
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <style>
+        h1,
+        h2,
+        h3,
+        h4 {
+            margin: 0
+        }
+
+        body {
+            --bigw: calc(40wv);
+            color: rgb(236, 236, 236);
+            background-color: rgb(0.2, 0.2, 0.2);
+            font-family: sans-serif;
+            line-height: 1.4rem;
+            display: grid;
+            grid-template-columns: 4rem minmax(40rem, 45rem) 1fr;
+            grid-template-areas: "1 main 2";
+            grid-template-rows: min-content;
+            grid-auto-flow: row;
+            grid-auto-rows: max-content;
+            height: 100%;
+        }
+
+        .nokko-gradient {
+            color: rgba(1, 1, 1, 0.0);
+            background: linear-gradient(to right, yellow, orangered, magenta);
+            background-clip: text;
+            -webkit-background-clip: text;
+        }
+
+        body>* {
+            grid-column-start: main-start;
+            grid-column-end: main-end;
+        }
+
+        a {
+            color: orangered;
+        }
+
+        a:hover, a:visited:hover {
+            color:rgb(255, 0, 123);
+        }
+
+        a:visited {
+            color: orange;
+        }
+
+        code {
+            display: inline-block;
+            font-size: 0.8rem;
+            background-color: rgb(66, 66, 66);
+            padding: 0 0.25rem;
+            border-radius: 0.15rem;
+            line-height: 1rem;
+        }
+
+        pre {
+            background-color: rgb(66, 66, 66);
+            width: min-content;
+            padding: 1rem 2rem;
+            border-radius: 0.2rem;
+            line-height: 1rem;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-rows: auto auto;
+            grid-template-columns: min-content 1em min-content;
+        }
+        .two-column > figcaption {
+            grid-column: 1 / 4;
+            font-size: smaller;
+        }
+        .two-column > pre:last-child {
+            grid-column-start: 3;
+        }
+
+        .footnotes {
+            font-size: smaller;
+            background-color: rgba(255, 255, 255, 0.2);
+            padding: 0.1rem 0;
+            padding-left: 2rem;
+            padding-right: 2rem;
+        }
+        .footnotes .two-column > figcaption {font-size: unset}
+
+    </style>
+    <style type="text/css">
+        @media print {
+            .TridactylStatusIndicator {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h1 id="the-maz-file-format">The MAZ File Format</h1>
+    <p>This Git repository contains several pieces of code that read and write to <code>MAZ</code> files, associated
+        with the <code>.maz</code> file extension. This document aims to give motivation for the <code>MAZ</code> file
+        format, describe its structure, and provide a starting point to implementers of <code>MAZ</code> serialization
+        and deserialization code.</p>
+    <h2 id="background">Background</h2>
+    <p>Maze generation is a <a
+            href="https://weblog.jamisbuck.org/2010/12/27/maze-generation-recursive-backtracking">favourite pastime of
+            many programmers</a>. The author of this document, one <span class="nokko-gradient">nokko</span>,
+        has cultivated a particular fascination with maze-generating,
+        -analyzing, and -solving programs. Though many styles of mazes can be
+        generated algorithmically, let us consider two-dimensional,
+        “rectangular” mazes.</p>
+    <p>A rectangular maze can be drawn on graph paper. It has a width and a height, call them <code>w</code> and
+        <code>h</code>. There are <code>w * h</code> cells in a rectangular maze. Each cell has 4 bits of data
+        associated with it: the <code>N</code>, <code>E</code>, <code>S</code>, and <code>W</code> bits. The bits
+        correspond to the cardinal directions: North, East, South, and West.
+        <sup><a href="#footnote_cardinal" ref="ref_cardinal">[2‍]</a></sup>
+    </p>
+    <p>Each bit with a value of <code>1</code> represents a path between a cell and its neighbour. Accordingly, a bit
+        with value <code>0</code> represents a wall. In this document, when referring to a cell with value
+        <code>0b0110</code>, we mean a cell with the <code>E</code> and <code>S</code> bits set to <code>1</code>, and
+        the <code>N</code> and <code>W</code> bits set to <code>0</code>. The order of the bits, <code>NESW</code> is
+        arbitrary.
+    </p>
+    <section class="footnotes">
+        <p id="footnote_cardinal">
+            <a href="#ref_cardinal">[2‍]</a>
+            Or the <code>U</code>, <code>R</code>,<code>D</code>, and <code>L</code> bits, if you aren't
+            cartographically inclined.
+        </p>
+        <hr>
+        <p >
+            Equivalently, a more mathematically-inclined reader may consider a graph
+            where each vertex has at least 2 and at most 4 connections as the
+            “stone” into which a maze is carved – a <a
+                href="https://en.wikipedia.org/wiki/Lattice_graph#Square_grid_graph">square grid graph</a>.
+        </p>
+        <p >
+            So, a maze carved into the stone is just a subset of the graph's edges. I
+            mean, most subsets are probably pretty bad mazes, but you can call them
+            mazes, and, more importantly, represent them in <code>MAZ</code> format.
+        </p>
+        <p >
+            Then, a “perfect” maze is a <a href="https://en.wikipedia.org/wiki/Spanning_tree">spanning tree</a>
+            of such a graph, where there is a path from each vertex to each other
+            vertex. All maze-generating algorithms that produce perfect mazes,
+            really produce spanning trees. Ain’t that neat.
+        </p>
+    </section>
+    <figure class="two-column">
+
+        <figcaption>
+            <p>
+                Left: A maze with <code>w=3, h=3</code>. All cell values are <code>0b0000</code>.
+                Each cell is displayed with 9 characters – A more compact ASCII display
+                is possible, but will not reproduce all of the detail in an imperfect
+                maze, because it assumes the neighbours' bits are consistent with each
+                other.
+        </p>
+            <p>
+                Right: The same maze, but all cell values are <code>0b1111</code>. 
+                This is an invalid maze for most purposes, since there are connections 
+                leading out of bounds.
+            </p>
+        </figcaption>
+<pre>
+#########
+# ## ## #
+#########
+#########
+# ## ## #
+#########
+#########
+# ## ## #
+#########
+</pre>
+<pre>
+# ## ## #
+         
+# ## ## #
+# ## ## #
+         
+# ## ## #
+# ## ## #
+         
+# ## ## #
+</pr >
+
+    </figure>
+
+    <h2 id="a-simple-approach">A Simple Approach</h2>
+    <p>A generally good strategy for storing maze data <em>as it is being generated</em> (though not
+        the only viable strategy, especially for <a
+            href="https://weblog.jamisbuck.org/2010/12/29/maze-generation-eller-s-algorithm">certain algorithms</a> with
+        reduced memory requirements,) is to use a simple two-dimensional array of bytes.
+    </p>
+    <p>Then, to carve a path between a cell at array index <code>current</code> in the two-dimensional array
+        <code>m</code>, and its southern neighbour:
+    </p>
+    <ol>
+        <li>Set the <code>S</code> bit on <code>m[current]</code>.</li>
+        <li>Set the <code>N</code> bit on <code>m[w + current]</code>.</li>
+    </ol>
+    <p>For programmer convenience, the direction bits <code>NESW</code> are often put into integer constants:</p>
+    <pre><code class="lang-c">const char N = <span class="hljs-number">8</span> // <span class="hljs-number">0b1000</span>
+const char E = <span class="hljs-number">4</span> // <span class="hljs-number">0b0100</span>
+const char S = <span class="hljs-number">2</span> // <span class="hljs-number">0b0010</span>
+const char W = <span class="hljs-number">1</span> // <span class="hljs-number">0b0001</span>
+</code></pre>
+    <p>And are composed with bitwise operators:</p>
+    <pre><code class="lang-c">void carve_south(<span class="hljs-built_in">char</span> *<span class="hljs-built_in">cell</span>, struct maze m) {
+    *<span class="hljs-built_in">cell</span> |= S;
+    *(<span class="hljs-built_in">cell</span> + m.w) |= <span class="hljs-built_in">N</span>;
+}
+</code></pre>
+    <section class="footnotes"
+        style="font-size:smaller; background-color: rgba(0,0,0,0.2); padding-top: 0.1rem; padding-bottom: 0.1rem;">
+        <p >
+            The above code is a C implementation of the “carve south” procedure
+            described in pseudocode a couple of paragraphs ago. It uses pointers,
+            but you could write a version that works with indices instead.
+        </p>
+    </section>
+
+    <p>Likewise, the bitwise AND operator can be used to check whether a given cell has an opening in a given direction:
+    </p>
+    <pre><code class="lang-c"><span class="hljs-function"><span class="hljs-keyword">bool</span> <span class="hljs-title">goes_south</span><span class="hljs-params">(<span class="hljs-keyword">char</span> *cell)</span> </span>{
+    <span class="hljs-keyword">return</span> (*cell &amp; S) != <span class="hljs-number">0</span>;
+}
+</code></pre>
+    <p>Note that earlier we said that we would store the maze in an array of
+        bytes as it was being generated, and indeed, the above code uses the <code>char</code>
+        datatype (8 bits on most machines) to refer to the values of cells in
+        the maze. But we only make use of the lower 4 bits of this <code>char</code>, because we'll never write a value
+        greater than <code>0b00001111</code> into the maze!</p>
+    <h2 id="motivation">Motivation</h2>
+    <p>In short: I wanted to create my own bitmap file format, specifically for storing maze data.</p>
+    <p>Like many bitmap formats, it should have a few header bytes that
+        clarify what dimensions the maze should take. At its most basic, it's
+        more or less equivalent to a bit-depth 4 uncompressed bitmap.</p>
+    <p>It also supports including auxiliary data, for example: Comments,
+        annotations with associated bounding boxes, information about the
+        generation method and the author's name, as well as labelled blobs of
+        data containing information about each cell. (Colours, IDs, etc.)</p>
+    <section class="footnotes">
+        <figure class="two-column">        
+            <figcaption>
+                Maze data can also be represented as a sort of LOGO-style program:
+            </figcaption>
+<pre>####################################
+#---------------------------------+#
+##################################|#
+##################################|#
+#+--------------------------------+#
+#|##################################
+#|##################################
+#+--------------------------------o#
+####################################
+</pre>
+
+<pre>
+TO jshape
+fd 12
+rt 90
+fd 1
+rt 90
+END
+TO lshape
+fd 12
+lt 90
+fd 1
+lt 90
+END
+rt 90
+jshape
+lshape
+jshape
+lshape
+</pre>
+        </figure>
+        <p >
+            I suspect that for some mazes, naïvely compressing the bitmap
+            representation will be a lot less effective than compressing the
+            procedural-program-style version. (Ones with lots of regular squiggles
+            and straight lines?) So, another motivation is to test this theory, and
+            if it bears fruit, support more compressable mazes!
+        </p>
+    </section>
+
+
+    <p>As already discussed, while generating mazes, it's convenient to not
+        care too much about memory usage – it's okay to use a whole byte when a
+        nibble would do. But if we want to store the generated maze for later
+        display/analysis/critique/etc., it seems that emitting a whole byte for
+        each cell is very wasteful – a 50x50 maze <em>could</em> be represented in 1,250 bytes, but just dumping it out
+        of memory would produce 2,500.</p>
+    <p>At time of writing, (this document is being written concurrently with
+        the implementation of the first version of serialization and
+        deserialization code for the <code>MAZ</code> format,) the author has written 5 implementations of one <a
+            href="https://weblog.jamisbuck.org/2010/12/27/maze-generation-recursive-backtracking">“Recursive
+            Backtracker”</a> algorithm for maze generation, across 3 different languages.</p>
+    <p>I also expect to write more maze-related utilities, for example
+        structure analyzers and solvers, that don't generate their own mazes but
+        must instead read them from an input file – so I need a file <em>format</em>, so why not make my own.</p>
+    <h2 id="maz-version-1-spec"><span class="nokko-gradient">MAZ</span> Version 1 Spec</h2>
+    <h3 id="file-header">File Header</h3>
+    <p>All <code>MAZ</code>-format files start with some header bytes:</p>
+    <pre><code class="lang-hex">e4 e5 <span class="hljs-number">6</span>d <span class="hljs-number">61</span> <span class="hljs-number">7</span>a <span class="hljs-number">65</span> <span class="hljs-number">3</span>c <span class="hljs-number">33</span>
+</code></pre>
+    <section class="footnotes"
+        style="font-size:smaller; background-color: rgba(0,0,0,0.2); padding-top: 0.1rem; padding-bottom: 0.1rem;">
+        <p >
+            This spells <code>"\xe4\xe5\maze&lt;3"</code>.
+        </p>
+    </section>
+
+
+    <p>The header contains intentionally-blank padding of 16 bytes:</p>
+    <pre><code><span class="hljs-symbol">00 </span><span class="hljs-number">00</span> <span class="hljs-number">00</span> <span class="hljs-number">00</span> <span class="hljs-number">00</span> <span class="hljs-number">00</span> <span class="hljs-number">00</span> <span class="hljs-number">00</span>
+<span class="hljs-symbol">00 </span><span class="hljs-number">00</span> <span class="hljs-number">00</span> <span class="hljs-number">00</span> <span class="hljs-number">00</span> <span class="hljs-number">00</span> <span class="hljs-number">00</span> <span class="hljs-number">00</span>
+</code></pre>
+    <p>This is meant to be filled with more useful stuff further down the line – version and extension information.</p>
+    <p>The next 8 bytes are the <code>width</code> and <code>height</code> fields – 32-bit unsigned integers.</p>
+    <pre><code><span class="hljs-symbol">00 </span><span class="hljs-number">00</span> <span class="hljs-number">00</span> <span class="hljs-number">05</span> <span class="hljs-number">00</span> <span class="hljs-number">00</span> <span class="hljs-number">00</span> <span class="hljs-number">05</span>
+</code></pre>
+    <h3 id="packed-data">Packed Data</h3>
+    <p>The next chunk contains the actual maze data. It begins with a single
+        byte defining the packing method – at present the only defined method
+        is Simple Raw Packing. In the future the LOGO-style method mentioned
+        above, and compression techniques like Run Length Encoding may be
+        supported. A value of <code>ff</code> indicates that this isn't a packed data chunk - this is a reserved value
+        for extensions to the format.</p>
+    <pre><code><span class="hljs-code">+======+</span>====================+
+<span class="hljs-section">| Byte |   Packing Method   |
++======+====================+</span>
+<span class="hljs-section">|  00  | Simple Raw Packing |
++------+--------------------+</span>
+<span class="hljs-section">|  ff  |     (Reserved)     |
++------+--------------------+</span>
+</code></pre>
+    <p>The following <code>ceil((width * height) / 2)</code>
+        bytes are the packed representation of the maze data. When
+        reconstituting the packed data into a byte-array, a deserializer would
+        consume a byte, write the high nibble to the array, move to the next
+        location in the array, then, write the low nibble into the array.</p>
+    <p>In a maze with an odd number of cells, the last nibble in the packed data section should be set to
+        <code>0000</code>.
+    </p>
+    <h2 id="reference-implementation">Reference Implementation</h2>
+    <p>See <code>export.c</code> and <code>import.c</code> in this repository.</p>
+    <footer></footer>
+</body>
+<style type="text/css"></style>
+
+</html>
