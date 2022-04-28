@@ -317,6 +317,8 @@ int main(void) {
             m.data = mptr->data;
             box_data = m.data;
             free(old_data);
+            m.width = mptr->width;
+            m.height = mptr->height;
             free(mptr);
             GuiDisable();
         }
